@@ -1,0 +1,11 @@
+git:latest
+workflow-aggregator:latest
+docker-workflow:latest
+kubernetes:latest
+sonar:latest
+jacoco:latest
+email-ext:latest
+maven-plugin:latest
+pipeline-stage-view:latest
+blueocean:latest
+credentials-binding:latest

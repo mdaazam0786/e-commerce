@@ -1,0 +1,368 @@
+pipeline {
+    agent any
+    
+    tools {
+        maven 'Maven-3.9'
+        jdk 'JDK-17'
+    }
+    
+    environment {
+        DOCKER_REGISTRY = 'your-docker-registry'
+        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
+        SONARQUBE_SERVER = 'SonarQube'
+        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(
+                        script: "git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
+                }
+            }
+        }
+        
+        stage('Build Common Module') {
+            steps {
+                dir('common') {
+                    sh 'mvn clean install -DskipTests'
+                }
+            }
+        }
+        
+        stage('Build All Services') {
+            parallel {
+                stage('Build Service Discovery') {
+                    steps {
+                        dir('service-discovery') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+                stage('Build API Gateway') {
+                    steps {
+                        dir('api-gateway') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+                stage('Build User Service') {
+                    steps {
+                        dir('user-service') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Product Service') {
+                    steps {
+                        dir('product-service') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Cart Service') {
+                    steps {
+                        dir('cart-service') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Order Service') {
+                    steps {
+                        dir('order-service') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Payment Service') {
+                    steps {
+                        dir('payment-service') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Notification Service') {
+                    steps {
+                        dir('notification-service') {
+                            sh 'mvn clean package -DskipTests'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            parallel {
+                stage('Test User Service') {
+                    steps {
+                        dir('user-service') {
+                            sh 'mvn test'
+                        }
+                    }
+                }
+                stage('Test Product Service') {
+                    steps {
+                        dir('product-service') {
+                            sh 'mvn test'
+                        }
+                    }
+                }
+                stage('Test Cart Service') {
+                    steps {
+                        dir('cart-service') {
+                            sh 'mvn test'
+                        }
+                    }
+                }
+                stage('Test Order Service') {
+                    steps {
+                        dir('order-service') {
+                            sh 'mvn test'
+                        }
+                    }
+                }
+                stage('Test Payment Service') {
+                    steps {
+                        dir('payment-service') {
+                            sh 'mvn test'
+                        }
+                    }
+                }
+                stage('Test Notification Service') {
+                    steps {
+                        dir('notification-service') {
+                            sh 'mvn test'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Code Quality Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        
+        stage('Build Docker Images') {
+            parallel {
+                stage('Docker - Service Discovery') {
+                    steps {
+                        script {
+                            dir('service-discovery') {
+                                docker.build("${DOCKER_REGISTRY}/service-discovery:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/service-discovery:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Docker - API Gateway') {
+                    steps {
+                        script {
+                            dir('api-gateway') {
+                                docker.build("${DOCKER_REGISTRY}/api-gateway:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/api-gateway:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Docker - User Service') {
+                    steps {
+                        script {
+                            dir('user-service') {
+                                docker.build("${DOCKER_REGISTRY}/user-service:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/user-service:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Docker - Product Service') {
+                    steps {
+                        script {
+                            dir('product-service') {
+                                docker.build("${DOCKER_REGISTRY}/product-service:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/product-service:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Docker - Cart Service') {
+                    steps {
+                        script {
+                            dir('cart-service') {
+                                docker.build("${DOCKER_REGISTRY}/cart-service:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/cart-service:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Docker - Order Service') {
+                    steps {
+                        script {
+                            dir('order-service') {
+                                docker.build("${DOCKER_REGISTRY}/order-service:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/order-service:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Docker - Payment Service') {
+                    steps {
+                        script {
+                            dir('payment-service') {
+                                docker.build("${DOCKER_REGISTRY}/payment-service:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/payment-service:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Docker - Notification Service') {
+                    steps {
+                        script {
+                            dir('notification-service') {
+                                docker.build("${DOCKER_REGISTRY}/notification-service:${env.GIT_COMMIT_SHORT}")
+                                docker.build("${DOCKER_REGISTRY}/notification-service:latest")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Push Docker Images') {
+            steps {
+                script {
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDENTIALS_ID}") {
+                        def services = [
+                            'service-discovery', 'api-gateway', 'user-service',
+                            'product-service', 'cart-service', 'order-service',
+                            'payment-service', 'notification-service'
+                        ]
+                        
+                        services.each { service ->
+                            sh "docker push ${DOCKER_REGISTRY}/${service}:${env.GIT_COMMIT_SHORT}"
+                            sh "docker push ${DOCKER_REGISTRY}/${service}:latest"
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Development') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                script {
+                    sh '''
+                        docker-compose -f docker-compose.yml down
+                        docker-compose -f docker-compose.yml up -d
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                branch 'staging'
+            }
+            steps {
+                script {
+                    withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS_ID}", variable: 'KUBECONFIG')]) {
+                        sh '''
+                            kubectl set image deployment/service-discovery service-discovery=${DOCKER_REGISTRY}/service-discovery:${GIT_COMMIT_SHORT} -n staging
+                            kubectl set image deployment/api-gateway api-gateway=${DOCKER_REGISTRY}/api-gateway:${GIT_COMMIT_SHORT} -n staging
+                            kubectl set image deployment/user-service user-service=${DOCKER_REGISTRY}/user-service:${GIT_COMMIT_SHORT} -n staging
+                            kubectl set image deployment/product-service product-service=${DOCKER_REGISTRY}/product-service:${GIT_COMMIT_SHORT} -n staging
+                            kubectl set image deployment/cart-service cart-service=${DOCKER_REGISTRY}/cart-service:${GIT_COMMIT_SHORT} -n staging
+                            kubectl set image deployment/order-service order-service=${DOCKER_REGISTRY}/order-service:${GIT_COMMIT_SHORT} -n staging
+                            kubectl set image deployment/payment-service payment-service=${DOCKER_REGISTRY}/payment-service:${GIT_COMMIT_SHORT} -n staging
+                            kubectl set image deployment/notification-service notification-service=${DOCKER_REGISTRY}/notification-service:${GIT_COMMIT_SHORT} -n staging
+                            
+                            kubectl rollout status deployment/service-discovery -n staging
+                            kubectl rollout status deployment/api-gateway -n staging
+                            kubectl rollout status deployment/user-service -n staging
+                            kubectl rollout status deployment/product-service -n staging
+                            kubectl rollout status deployment/cart-service -n staging
+                            kubectl rollout status deployment/order-service -n staging
+                            kubectl rollout status deployment/payment-service -n staging
+                            kubectl rollout status deployment/notification-service -n staging
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            steps {
+                input message: 'Deploy to Production?', ok: 'Deploy'
+                script {
+                    withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS_ID}", variable: 'KUBECONFIG')]) {
+                        sh '''
+                            kubectl set image deployment/service-discovery service-discovery=${DOCKER_REGISTRY}/service-discovery:${GIT_COMMIT_SHORT} -n production
+                            kubectl set image deployment/api-gateway api-gateway=${DOCKER_REGISTRY}/api-gateway:${GIT_COMMIT_SHORT} -n production
+                            kubectl set image deployment/user-service user-service=${DOCKER_REGISTRY}/user-service:${GIT_COMMIT_SHORT} -n production
+                            kubectl set image deployment/product-service product-service=${DOCKER_REGISTRY}/product-service:${GIT_COMMIT_SHORT} -n production
+                            kubectl set image deployment/cart-service cart-service=${DOCKER_REGISTRY}/cart-service:${GIT_COMMIT_SHORT} -n production
+                            kubectl set image deployment/order-service order-service=${DOCKER_REGISTRY}/order-service:${GIT_COMMIT_SHORT} -n production
+                            kubectl set image deployment/payment-service payment-service=${DOCKER_REGISTRY}/payment-service:${GIT_COMMIT_SHORT} -n production
+                            kubectl set image deployment/notification-service notification-service=${DOCKER_REGISTRY}/notification-service:${GIT_COMMIT_SHORT} -n production
+                            
+                            kubectl rollout status deployment/service-discovery -n production
+                            kubectl rollout status deployment/api-gateway -n production
+                            kubectl rollout status deployment/user-service -n production
+                            kubectl rollout status deployment/product-service -n production
+                            kubectl rollout status deployment/cart-service -n production
+                            kubectl rollout status deployment/order-service -n production
+                            kubectl rollout status deployment/payment-service -n production
+                            kubectl rollout status deployment/notification-service -n production
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            junit '**/target/surefire-reports/*.xml'
+            jacoco execPattern: '**/target/jacoco.exec'
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+            emailext(
+                subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                body: "Build succeeded: ${env.BUILD_URL}",
+                to: 'team@example.com'
+            )
+        }
+        failure {
+            echo 'Pipeline failed!'
+            emailext(
+                subject: "FAILURE: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                body: "Build failed: ${env.BUILD_URL}",
+                to: 'team@example.com'
+            )
+        }
+    }
+}

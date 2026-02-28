@@ -1,0 +1,24 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: payment-service
+
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID:your_razorpay_key_id}
+    secret: ${RAZORPAY_KEY_SECRET:your_razorpay_key_secret}
+  webhook:
+    secret: ${RAZORPAY_WEBHOOK_SECRET:your_webhook_secret}
+
+services:
+  order-service:
+    url: http://order-service
+  notification-service:
+    url: http://notification-service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

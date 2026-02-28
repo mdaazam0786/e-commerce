@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # Databases
+  mysql-user:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: userdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - user-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  mysql-product:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: productdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - product-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  mysql-order:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: orderdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - order-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  mongodb:
+    image: mongo:7-jammy
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+
+  # Service Discovery
+  service-discovery:
+    build: ./service-discovery
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
+
+  # Microservices
+  user-service:
+    build: ./user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql-user
+      - dynamodb-local
+      - service-discovery
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-user:3306/userdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      AWS_DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
+
+  product-service:
+    build: ./product-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql-product
+      - service-discovery
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-product:3306/productdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
+
+  cart-service:
+    build: ./cart-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - mongodb
+      - service-discovery
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/cartdb
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - mysql-order
+      - service-discovery
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-order:3306/orderdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - service-discovery
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - service-discovery
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+
+volumes:
+  user-data:
+  product-data:
+  order-data:
+  mongo-data:
+  dynamodb-data:

@@ -1,0 +1,30 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: cart-service
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/cartdb
+      database: cartdb
+      min-pool-size: 10
+      max-pool-size: 100
+      max-wait-time: 120000
+      max-connection-idle-time: 60000
+      max-connection-life-time: 0
+      connect-timeout: 10000
+      socket-timeout: 0
+      server-selection-timeout: 30000
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+
+logging:
+  level:
+    com.example.ecommerce.cart: DEBUG
+    org.springframework.data.mongodb: DEBUG

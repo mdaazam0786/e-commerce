@@ -1,0 +1,216 @@
+### E-Commerce Platform API Tests
+### Use with REST Client extension in VS Code or IntelliJ HTTP Client
+
+@baseUrl = http://localhost:8080
+@userEmail = test@example.com
+@password = password123
+
+### 1. Register User
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{password}}",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "+1234567890"
+}
+
+### 2. Login User
+# @name login
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{password}}"
+}
+
+### 3. Get User Profile
+GET {{baseUrl}}/api/users/profile
+X-User-Email: {{userEmail}}
+
+### 4. Create Product
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "name": "MacBook Pro 16",
+  "description": "High-performance laptop for professionals",
+  "price": 2499.99,
+  "category": "electronics",
+  "imageUrl": "https://example.com/macbook.jpg",
+  "stock": 50
+}
+
+### 5. Create Another Product
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "name": "iPhone 15 Pro",
+  "description": "Latest iPhone with advanced features",
+  "price": 999.99,
+  "category": "electronics",
+  "imageUrl": "https://example.com/iphone.jpg",
+  "stock": 100
+}
+
+### 6. Get All Products (Paginated)
+GET {{baseUrl}}/api/products?page=0&pageSize=10&sortBy=createdAt&sortDir=DESC
+
+### 6b. Get All Products (Page 2)
+GET {{baseUrl}}/api/products?page=1&pageSize=5
+
+### 7. Get Product by ID
+GET {{baseUrl}}/api/products/1
+
+### 8. Search Products (Paginated)
+GET {{baseUrl}}/api/products/search?name=MacBook&page=0&pageSize=10
+
+### 9. Get Products by Category (Paginated)
+GET {{baseUrl}}/api/products/category/electronics?page=0&pageSize=10&sortBy=price&sortDir=ASC
+
+### 10. Add Item to Cart
+POST {{baseUrl}}/api/cart/items
+X-User-Email: {{userEmail}}
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "productName": "MacBook Pro 16",
+  "price": 2499.99,
+  "quantity": 1
+}
+
+### 11. Add Another Item to Cart
+POST {{baseUrl}}/api/cart/items
+X-User-Email: {{userEmail}}
+Content-Type: application/json
+
+{
+  "productId": 2,
+  "productName": "iPhone 15 Pro",
+  "price": 999.99,
+  "quantity": 2
+}
+
+### 12. Get Cart
+GET {{baseUrl}}/api/cart
+X-User-Email: {{userEmail}}
+
+### 13. Update Cart Item Quantity
+PUT {{baseUrl}}/api/cart/items/1?quantity=2
+X-User-Email: {{userEmail}}
+
+### 14. Remove Item from Cart
+DELETE {{baseUrl}}/api/cart/items/2
+X-User-Email: {{userEmail}}
+
+### 15. Create Order
+POST {{baseUrl}}/api/orders
+X-User-Email: {{userEmail}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "productName": "MacBook Pro 16",
+      "price": 2499.99,
+      "quantity": 1
+    }
+  ],
+  "totalAmount": 2499.99,
+  "shippingAddress": "123 Main Street, San Francisco, CA 94102"
+}
+
+### 16. Get User Orders (Paginated)
+GET {{baseUrl}}/api/orders?page=0&pageSize=10&sortBy=createdAt&sortDir=DESC
+X-User-Email: {{userEmail}}
+
+### 16b. Get User Orders (Page 2)
+GET {{baseUrl}}/api/orders?page=1&pageSize=5
+X-User-Email: {{userEmail}}
+
+### 17. Get Order by ID
+GET {{baseUrl}}/api/orders/1
+
+### 18. Update Order Status
+PUT {{baseUrl}}/api/orders/1/status?status=CONFIRMED
+
+### 19. Process Payment
+POST {{baseUrl}}/api/payments/process
+Content-Type: application/json
+
+{
+  "orderId": 1,
+  "amount": 2499.99,
+  "paymentMethod": "CREDIT_CARD",
+  "cardNumber": "4111111111111111",
+  "cvv": "123",
+  "expiryDate": "12/25"
+}
+
+### 20. Get Payment Status
+GET {{baseUrl}}/api/payments/transaction-id-here
+
+### 21. Send Email Notification
+POST {{baseUrl}}/api/notifications/email
+Content-Type: application/json
+
+{
+  "to": "{{userEmail}}",
+  "subject": "Order Confirmation",
+  "body": "Your order #1 has been confirmed and will be shipped soon."
+}
+
+### 22. Update Product Stock
+PATCH {{baseUrl}}/api/products/1/stock?quantity=-1
+
+### 23. Update Product
+PUT {{baseUrl}}/api/products/1
+Content-Type: application/json
+
+{
+  "name": "MacBook Pro 16 (Updated)",
+  "description": "High-performance laptop with M3 chip",
+  "price": 2399.99,
+  "category": "electronics",
+  "imageUrl": "https://example.com/macbook-new.jpg",
+  "stock": 49
+}
+
+### 24. Clear Cart
+DELETE {{baseUrl}}/api/cart
+X-User-Email: {{userEmail}}
+
+### 25. Delete Product
+DELETE {{baseUrl}}/api/products/2
+
+### Health Checks
+
+### Check API Gateway Health
+GET http://localhost:8080/actuator/health
+
+### Check Eureka Health
+GET http://localhost:8761/actuator/health
+
+### Check User Service Health
+GET http://localhost:8081/actuator/health
+
+### Check Product Service Health
+GET http://localhost:8082/actuator/health
+
+### Check Cart Service Health
+GET http://localhost:8083/actuator/health
+
+### Check Order Service Health
+GET http://localhost:8084/actuator/health
+
+### Check Payment Service Health
+GET http://localhost:8085/actuator/health
+
+### Check Notification Service Health
+GET http://localhost:8086/actuator/health
